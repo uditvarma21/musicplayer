@@ -102,27 +102,38 @@ function displaySearchResults() {
         return;
     }
 
-    container.innerHTML = searchResults.map(video => `
-        <div class="video-card">
-            <img src="${video.snippet.thumbnails.medium.url}" 
-                 alt="${video.snippet.title}" 
-                 class="video-thumbnail"
-                 onclick="playVideo('${video.id.videoId}', '${escapeHtml(video.snippet.title)}', '${escapeHtml(video.snippet.channelTitle)}')">
-            <div class="video-info">
-                <div class="video-title">${video.snippet.title}</div>
-                <div class="video-channel">${video.snippet.channelTitle}</div>
-                <div class="video-actions">
-                    <button class="btn play-btn" onclick="playVideo('${video.id.videoId}', '${escapeHtml(video.snippet.title)}', '${escapeHtml(video.snippet.channelTitle)}')">
-                        ▶️ Play
-                    </button>
-                    <button class="btn fav-btn ${isFavorite(video.id.videoId) ? 'favorited' : ''}" 
-                            onclick="toggleFavorite('${video.id.videoId}', '${escapeHtml(video.snippet.title)}', '${escapeHtml(video.snippet.channelTitle)}', '${video.snippet.thumbnails.medium.url}')">
-                        ❤️ ${isFavorite(video.id.videoId) ? 'Favorited' : 'Favorite'}
-                    </button>
+    // Ensure all search results are displayed in tiles
+    container.innerHTML = searchResults.map(video => {
+        const videoData = {
+            id: video.id.videoId,
+            title: video.snippet.title,
+            channel: video.snippet.channelTitle,
+            thumbnail: video.snippet.thumbnails.medium.url,
+            url: `https://www.youtube.com/watch?v=${video.id.videoId}`
+        };
+
+        return `
+            <div class="video-card" data-video-id="${video.id.videoId}">
+                <img src="${video.snippet.thumbnails.medium.url}" 
+                     alt="${escapeHtml(video.snippet.title)}" 
+                     class="video-thumbnail"
+                     onclick="playMusicOnly('${video.id.videoId}', '${escapeHtml(video.snippet.title)}', '${escapeHtml(video.snippet.channelTitle)}')">
+                <div class="video-info">
+                    <div class="video-title" title="${escapeHtml(video.snippet.title)}">${video.snippet.title}</div>
+                    <div class="video-channel">${video.snippet.channelTitle}</div>
+                    <div class="video-actions">
+                        <button class="btn play-btn" onclick="playMusicOnly('${video.id.videoId}', '${escapeHtml(video.snippet.title)}', '${escapeHtml(video.snippet.channelTitle)}')">
+                            🎵 Play Music
+                        </button>
+                        <button class="btn fav-btn ${isFavorite(video.id.videoId) ? 'favorited' : ''}" 
+                                onclick="addToFavorites('${video.id.videoId}', '${escapeHtml(video.snippet.title)}', '${escapeHtml(video.snippet.channelTitle)}', '${video.snippet.thumbnails.medium.url}', '${videoData.url}')">
+                            ${isFavorite(video.id.videoId) ? '❤️ Favorited' : '🤍 Add to Favorites'}
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function displayFavorites() {
@@ -139,19 +150,22 @@ function displayFavorites() {
     }
 
     container.innerHTML = favorites.map(video => `
-        <div class="video-card">
+        <div class="video-card" data-video-id="${video.id}">
             <img src="${video.thumbnail}" 
-                 alt="${video.title}" 
+                 alt="${escapeHtml(video.title)}" 
                  class="video-thumbnail"
-                 onclick="playVideo('${video.id}', '${escapeHtml(video.title)}', '${escapeHtml(video.channel)}')">
+                 onclick="playFavoriteFromUrl('${video.id}', '${escapeHtml(video.title)}', '${escapeHtml(video.channel)}', '${video.url}')">
             <div class="video-info">
-                <div class="video-title">${video.title}</div>
+                <div class="video-title" title="${escapeHtml(video.title)}">${video.title}</div>
                 <div class="video-channel">${video.channel}</div>
+                <div class="video-url">
+                    <small>🔗 <a href="${video.url}" target="_blank" rel="noopener">YouTube Link</a></small>
+                </div>
                 <div class="video-actions">
-                    <button class="btn play-btn" onclick="playVideo('${video.id}', '${escapeHtml(video.title)}', '${escapeHtml(video.channel)}')">
-                        ▶️ Play
+                    <button class="btn play-btn" onclick="playFavoriteFromUrl('${video.id}', '${escapeHtml(video.title)}', '${escapeHtml(video.channel)}', '${video.url}')">
+                        🎵 Play Music
                     </button>
-                    <button class="btn fav-btn favorited" onclick="removeFavorite('${video.id}')">
+                    <button class="btn fav-btn remove-btn" onclick="removeFromFavorites('${video.id}')">
                         💔 Remove
                     </button>
                 </div>
@@ -160,19 +174,47 @@ function displayFavorites() {
     `).join('');
 }
 
-// Player functions
-function playVideo(videoId, title, channel) {
+// Player functions - Music Only Playback
+function playMusicOnly(videoId, title, channel) {
     if (!player) {
         alert('Player not ready yet. Please wait a moment and try again.');
         return;
     }
 
     currentVideoId = videoId;
-    player.loadVideoById(videoId);
     
+    // Load video for audio-only playback
+    player.loadVideoById({
+        videoId: videoId,
+        startSeconds: 0,
+        suggestedQuality: 'small' // Use lowest quality to save bandwidth since we only want audio
+    });
+    
+    // Update player UI
     document.getElementById('currentTitle').textContent = title;
     document.getElementById('currentChannel').textContent = channel;
     document.getElementById('nowPlaying').classList.add('visible');
+    
+    console.log(`Playing music: ${title} by ${channel}`);
+}
+
+function playFavoriteFromUrl(videoId, title, channel, url) {
+    console.log(`Playing favorite from URL: ${url}`);
+    
+    // Extract video ID from URL if needed
+    const urlVideoId = extractVideoIdFromUrl(url) || videoId;
+    
+    playMusicOnly(urlVideoId, title, channel);
+}
+
+function extractVideoIdFromUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        return urlObj.searchParams.get('v') || urlObj.pathname.split('/').pop();
+    } catch (error) {
+        console.error('Error extracting video ID from URL:', error);
+        return null;
+    }
 }
 
 function togglePlayPause() {
@@ -194,45 +236,103 @@ function stopPlayer() {
     document.getElementById('playPauseBtn').textContent = '▶️';
 }
 
-// Favorites functionality
-function toggleFavorite(videoId, title, channel, thumbnail) {
+// Enhanced Favorites functionality with URL saving
+function addToFavorites(videoId, title, channel, thumbnail, url) {
     if (isFavorite(videoId)) {
-        removeFavorite(videoId);
-    } else {
-        addFavorite(videoId, title, channel, thumbnail);
+        alert('This song is already in your favorites!');
+        return;
     }
-}
 
-function addFavorite(videoId, title, channel, thumbnail) {
     const favorite = {
         id: videoId,
         title: title,
         channel: channel,
         thumbnail: thumbnail,
+        url: url, // Save the complete YouTube URL
         addedAt: new Date().toISOString()
     };
     
     favorites.unshift(favorite);
     localStorage.setItem('musicFavorites', JSON.stringify(favorites));
     
-    // Update UI
-    if (currentTab === 'search') {
-        displaySearchResults();
-    } else {
-        displayFavorites();
+    // Update UI to show it's favorited
+    updateFavoriteButton(videoId, true);
+    
+    // Show success feedback
+    showNotification(`Added "${title}" to favorites!`);
+    
+    console.log(`Added to favorites: ${title} - URL: ${url}`);
+}
+
+function removeFromFavorites(videoId) {
+    const songToRemove = favorites.find(fav => fav.id === videoId);
+    
+    if (songToRemove && confirm(`Remove "${songToRemove.title}" from favorites?`)) {
+        favorites = favorites.filter(fav => fav.id !== videoId);
+        localStorage.setItem('musicFavorites', JSON.stringify(favorites));
+        
+        // Update UI
+        if (currentTab === 'search') {
+            updateFavoriteButton(videoId, false);
+        } else {
+            displayFavorites();
+        }
+        
+        showNotification(`Removed "${songToRemove.title}" from favorites`);
+        console.log(`Removed from favorites: ${songToRemove.title}`);
     }
 }
 
-function removeFavorite(videoId) {
-    favorites = favorites.filter(fav => fav.id !== videoId);
-    localStorage.setItem('musicFavorites', JSON.stringify(favorites));
-    
-    // Update UI
-    if (currentTab === 'search') {
-        displaySearchResults();
-    } else {
-        displayFavorites();
+function updateFavoriteButton(videoId, isFavorited) {
+    const card = document.querySelector(`[data-video-id="${videoId}"]`);
+    if (card) {
+        const button = card.querySelector('.fav-btn');
+        if (button) {
+            if (isFavorited) {
+                button.classList.add('favorited');
+                button.innerHTML = '❤️ Favorited';
+            } else {
+                button.classList.remove('favorited');
+                button.innerHTML = '🤍 Add to Favorites';
+            }
+        }
     }
+}
+
+function showNotification(message) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        z-index: 10000;
+        font-weight: 500;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
 }
 
 function isFavorite(videoId) {
