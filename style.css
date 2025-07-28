@@ -339,6 +339,48 @@ body {
     display: none;
 }
 
+.video-url {
+    margin: 5px 0;
+    font-size: 11px;
+}
+
+.video-url a {
+    color: #4ecdc4;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.video-url a:hover {
+    color: #45b7d1;
+    text-decoration: underline;
+}
+
+.remove-btn {
+    background: rgba(255, 107, 107, 0.3) !important;
+    color: #ff6b6b !important;
+    border: 1px solid #ff6b6b !important;
+}
+
+.remove-btn:hover {
+    background: linear-gradient(45deg, #ff6b6b, #ff8a80) !important;
+    color: white !important;
+}
+
+.notification {
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 10px;
