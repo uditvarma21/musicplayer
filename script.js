@@ -1,5 +1,5 @@
 // YouTube API configuration
-const API_KEY = 'YOUR_YOUTUBE_API_KEY'; // You need to replace this with your actual API key
+const API_KEY = 'AIzaSyDU7q1iEtyIbP8cq3zfz9BivzwjlSBqnlY'; // You need to replace this with your actual API key
 
 // Application state
 let player = null;
